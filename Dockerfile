@@ -1,5 +1,5 @@
 # First stage: source image
-FROM vdsm/virtual-dsm:7.38@sha256:9c02102a1cef6ec30250a2e89adbc526a63ce5e08b03a0a74750e94b72ab5a85 AS source
+FROM vdsm/virtual-dsm:7.41@sha256:3bec39b40ae702cdd6dc5ec25adc350ea47b01a722d60cc0805ab91969fb41cb AS source
 
 # Second stage: copy to empty image without VOLUME declaration
 FROM scratch
