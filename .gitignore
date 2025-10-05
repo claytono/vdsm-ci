@@ -1,0 +1,7 @@
+.direnv/
+playwright-output/
+cache/
+videos/
+**/.DS_Store
+**/__pycache__/
+*.pyc
