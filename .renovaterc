@@ -1,0 +1,68 @@
+{
+  "extends": [
+    "config:best-practices"
+  ],
+  "schedule": [
+    "before 6am on monday"
+  ],
+  "rebaseWhen": "behind-base-branch",
+  "minimumReleaseAge": "14 days",
+  "internalChecksFilter": "strict",
+  "semanticCommits": "disabled",
+  "addLabels": [
+    "renovate"
+  ],
+  "pre-commit": {
+    "enabled": true
+  },
+  "nix": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "matchManagers": [
+        "pre-commit"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "addLabels": [
+        "automerge"
+      ],
+      "description": "Auto-merge pre-commit hook updates if CI passes"
+    },
+    {
+      "matchManagers": [
+        "nix"
+      ],
+      "minimumReleaseAge": "0 days",
+      "automerge": true,
+      "automergeType": "pr",
+      "addLabels": [
+        "nix",
+        "automerge"
+      ],
+      "description": "Auto-merge Nix (flake.lock) updates if CI passes"
+    },
+    {
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "vdsm/virtual-dsm"
+      ],
+      "matchUpdateTypes": [
+        "digest"
+      ],
+      "minimumReleaseAge": "2 days",
+      "automerge": true,
+      "automergeType": "pr",
+      "addLabels": [
+        "automerge"
+      ],
+      "description": "Auto-merge VDSM base image digest updates if CI passes"
+    }
+  ],
+  "gitIgnoredAuthors": [
+    "github-actions[bot]@users.noreply.github.com"
+  ]
+}

@@ -1,0 +1,10 @@
+# Dockerfile only needs: convert.sh
+# Dockerfile.flatten uses empty context (stdin via `- < Dockerfile.flatten`)
+# Use allowlist approach for minimal build context
+
+# Exclude everything
+*
+.*
+
+# Include only what Dockerfile needs
+!convert.sh

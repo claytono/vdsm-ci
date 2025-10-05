@@ -1,0 +1,43 @@
+# Flatten the configured VDSM image to reduce size
+# This keeps only the configured disk images and removes Playwright/Chromium
+# Note: PAT file already removed during build by build-image.sh
+
+# Extract configured disk images from checkpoint
+ARG CHECKPOINT_IMAGE=ghcr.io/vdsm-ci/vdsm-ci:ckpt-final
+FROM ${CHECKPOINT_IMAGE} AS checkpoint
+
+# Get qcow2 conversion script and patched entry.sh from patched image
+FROM vdsm/virtual-dsm:patched AS patched
+
+# Final image: original base + qcow2 support + configured disks
+FROM vdsm/virtual-dsm:7.38
+
+# Add qcow2 conversion support (copy pre-patched files)
+COPY --from=patched /run/convert.sh /run/convert.sh
+COPY --from=patched /run/entry.sh /run/entry.sh
+
+# Copy only the configured disk images from checkpoint
+COPY --from=checkpoint /storage/*.qcow2 /storage/
+COPY --from=checkpoint /storage/*.img /storage/
+COPY --from=checkpoint /storage/dsm.* /storage/
+
+# Set loadvm argument to restore from final snapshot
+# Use -cpu max,-invtsc for snapshot compatibility in virtualized environments
+# Note: 'final' snapshot always exists (created even when checkpoints disabled)
+ENV ARGUMENTS="-cpu max,-invtsc -loadvm final"
+ENV DISK_FMT=qcow2
+
+# Add labels for image management
+LABEL org.opencontainers.image.vendor="vdsm-ci"
+LABEL vdsm-ci.image.type="final"
+LABEL vdsm-ci.managed="true"
+
+# Expose DSM and storage service ports
+# DSM HTTP
+EXPOSE 5000
+# iSCSI
+EXPOSE 3260
+# SMB
+EXPOSE 445
+# NFS
+EXPOSE 2049
