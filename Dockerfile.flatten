@@ -10,7 +10,7 @@ FROM ${CHECKPOINT_IMAGE} AS checkpoint
 FROM vdsm/virtual-dsm:patched AS patched
 
 # Final image: original base + qcow2 support + configured disks
-FROM vdsm/virtual-dsm:7.38
+FROM vdsm/virtual-dsm:7.38@sha256:9c02102a1cef6ec30250a2e89adbc526a63ce5e08b03a0a74750e94b72ab5a85
 
 # Add qcow2 conversion support (copy pre-patched files)
 COPY --from=patched /run/convert.sh /run/convert.sh
