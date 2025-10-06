@@ -21,6 +21,7 @@ DSM_VM_IP=${DSM_VM_IP:-"20.20.20.21"}
 
 CONTAINER_NAME="vdsm-config"
 PATCHED_IMAGE="vdsm/virtual-dsm:patched"
+QEMU_CPU_FLAGS="-cpu Westmere,-invtsc"
 
 KEEP_CONTAINER=false
 IGNORE_CHECKPOINTS=false
@@ -64,7 +65,7 @@ run_vdsm_container() {
 
   docker rm "$CONTAINER_NAME" 2>/dev/null || true
 
-  local qemu_args="-cpu max,-invtsc"
+  local qemu_args="$QEMU_CPU_FLAGS"
   if [[ -n "$snapshot_name" ]]; then
     qemu_args="$qemu_args -loadvm $snapshot_name"
   fi
@@ -99,7 +100,7 @@ stop_and_commit() {
   )
 
   if [[ -n "$snapshot_name" ]]; then
-    changes+=("ENV ARGUMENTS=\"-cpu max,-invtsc -loadvm ${snapshot_name}\"")
+    changes+=("ENV ARGUMENTS=\"${QEMU_CPU_FLAGS} -loadvm ${snapshot_name}\"")
   fi
 
   local change_args=()
@@ -607,6 +608,7 @@ echo "Flattening image to reduce size..."
 # Use empty context since Dockerfile.flatten only copies from other images
 docker build \
   --build-arg CHECKPOINT_IMAGE="$SOURCE_IMAGE" \
+  --build-arg QEMU_CPU_FLAGS="$QEMU_CPU_FLAGS" \
   -t "$FULL_IMAGE_NAME" - < Dockerfile.flatten
 
 # Clean up temp image if created
