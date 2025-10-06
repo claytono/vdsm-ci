@@ -4,6 +4,7 @@
 
 # Extract configured disk images from checkpoint
 ARG CHECKPOINT_IMAGE=ghcr.io/vdsm-ci/vdsm-ci:ckpt-final
+ARG QEMU_CPU_FLAGS="-cpu Westmere,-invtsc"
 FROM ${CHECKPOINT_IMAGE} AS checkpoint
 
 # Get qcow2 conversion script and patched entry.sh from patched image
@@ -22,9 +23,10 @@ COPY --from=checkpoint /storage/*.img /storage/
 COPY --from=checkpoint /storage/dsm.* /storage/
 
 # Set loadvm argument to restore from final snapshot
-# Use -cpu max,-invtsc for snapshot compatibility in virtualized environments
+# Use configured CPU flags for broad compatibility
 # Note: 'final' snapshot always exists (created even when checkpoints disabled)
-ENV ARGUMENTS="-cpu max,-invtsc -loadvm final"
+ARG QEMU_CPU_FLAGS
+ENV ARGUMENTS="${QEMU_CPU_FLAGS} -loadvm final"
 ENV DISK_FMT=qcow2
 
 # Add labels for image management
