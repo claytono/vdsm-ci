@@ -29,6 +29,7 @@ CLEANUP_OLD_IMAGES=true
 START_FROM_CHECKPOINT=""
 EXPLORE_ONLY=false
 ENABLE_CHECKPOINTS=false
+ACCEL_MODE="auto"  # "auto", "kvm", or "tcg"
 
 # ============================================================================
 # Helper Functions
@@ -70,12 +71,18 @@ run_vdsm_container() {
     qemu_args="$qemu_args -loadvm $snapshot_name"
   fi
 
+  local kvm_args=()
+  if [[ "$ACCEL_MODE" == "tcg" ]]; then
+    kvm_args+=(-e KVM=N)
+  fi
+
   docker run -d \
     --name "$CONTAINER_NAME" \
     --privileged \
     -p 5000:5000 \
     -e DISK_FMT=qcow2 \
     -e ARGUMENTS="$qemu_args" \
+    "${kvm_args[@]}" \
     -v "$DSM_PAT_FILE:/boot.pat:ro" \
     -v "$PWD/videos:/tmp/playwright-videos" \
     "$image"
@@ -289,8 +296,16 @@ parse_args() {
         ENABLE_CHECKPOINTS=true
         shift
         ;;
+      --tcg)
+        ACCEL_MODE="tcg"
+        shift
+        ;;
+      --kvm)
+        ACCEL_MODE="kvm"
+        shift
+        ;;
       *)
-        echo "Usage: $0 [--keep] [--no-cache] [--disable-image-cleanup] [--from-checkpoint <name>] [--explore] [--checkpoints]" >&2
+        echo "Usage: $0 [--keep] [--no-cache] [--disable-image-cleanup] [--from-checkpoint <name>] [--explore] [--checkpoints] [--tcg|--kvm]" >&2
         exit 1
         ;;
     esac
@@ -450,7 +465,33 @@ echo "============================================"
 echo "  Building Pre-configured VDSM Image"
 echo "============================================"
 echo ""
+
+# Auto-detect acceleration mode if set to "auto"
+if [[ "$ACCEL_MODE" == "auto" ]]; then
+  if [[ -e "/dev/kvm" ]]; then
+    ACCEL_MODE="kvm"
+    echo "Auto-detected: KVM acceleration available"
+  elif [[ "$OSTYPE" == "darwin"* ]]; then
+    ACCEL_MODE="tcg"
+    echo "Auto-detected: macOS detected, using TCG"
+  else
+    echo "ERROR: Cannot auto-detect acceleration mode." >&2
+    echo "  /dev/kvm not found and platform is not macOS." >&2
+    echo "  This platform requires explicit acceleration mode." >&2
+    echo "  Please specify --kvm or --tcg." >&2
+    exit 1
+  fi
+fi
+
+# Add variant suffix to image name (unless already present)
+if [[ "$IMAGE_NAME" != *"-kvm" ]] && [[ "$IMAGE_NAME" != *"-tcg" ]]; then
+  IMAGE_NAME="${IMAGE_NAME}-${ACCEL_MODE}"
+  FULL_IMAGE_NAME="$IMAGE_NAME:$IMAGE_TAG"
+fi
+
+echo ""
 echo "Image: $FULL_IMAGE_NAME"
+echo "Acceleration: $ACCEL_MODE"
 echo "Server name: $DSM_SERVER_NAME"
 echo "Admin user: $DSM_ADMIN_USER"
 echo ""
@@ -609,6 +650,7 @@ echo "Flattening image to reduce size..."
 docker build \
   --build-arg CHECKPOINT_IMAGE="$SOURCE_IMAGE" \
   --build-arg QEMU_CPU_FLAGS="$QEMU_CPU_FLAGS" \
+  --build-arg VARIANT="$ACCEL_MODE" \
   -t "$FULL_IMAGE_NAME" - < Dockerfile.flatten
 
 # Clean up temp image if created

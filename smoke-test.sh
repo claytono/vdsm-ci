@@ -4,7 +4,7 @@ set -euo pipefail
 IMAGE_NAME="${1:-ghcr.io/vdsm-ci/vdsm-ci:latest}"
 CONTAINER_NAME="vdsm-smoke-test"
 SMOKE_TEST_PORT=5001
-TIMEOUT=60  # Increased for snapshot restoration
+TIMEOUT=60
 
 echo "Starting smoke test for $IMAGE_NAME..."
 

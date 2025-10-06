@@ -10,7 +10,17 @@ on:
 
 jobs:
   build:
-    name: Build Pre-configured VDSM Image
+    strategy:
+      matrix:
+        variant:
+          - name: kvm
+            flag: "--kvm"
+            image_suffix: "-kvm"
+          - name: tcg
+            flag: "--tcg"
+            image_suffix: "-tcg"
+
+    name: Build ${{ matrix.variant.name }} variant
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
@@ -38,16 +48,17 @@ jobs:
         timeout_minutes: 60
         max_attempts: 2
         retry_wait_seconds: 60
-        command: ./build-image.sh --no-cache
+        command: ./build-image.sh --no-cache ${{ matrix.variant.flag }}
       env:
         REGISTRY: ghcr.io
-        DSM_IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/vdsm-ci
+        DSM_IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.variant.image_suffix }}
+        DSM_IMAGE_TAG: latest
 
     - name: Upload videos as artifacts
       if: always()
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
-        name: playwright-videos
+        name: playwright-videos-${{ matrix.variant.name }}
         path: videos/*.webm
         retention-days: 7
         if-no-files-found: ignore
@@ -57,5 +68,5 @@ jobs:
       run: |
         # Source version configuration
         source dsm-version.sh
-        docker push ghcr.io/${{ github.repository_owner }}/vdsm-ci:latest
-        docker push ghcr.io/${{ github.repository_owner }}/vdsm-ci:${DSM_VERSION}
+        docker push ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.variant.image_suffix }}:latest
+        docker push ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.variant.image_suffix }}:${DSM_VERSION}

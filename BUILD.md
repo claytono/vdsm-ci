@@ -9,10 +9,19 @@ This directory contains a bash-based build system for creating pre-configured Vi
 ## Quick Start
 
 ```bash
+# Build KVM variant (default - fast, requires KVM)
 ./build-image.sh
+
+# Build TCG variant (portable, works everywhere including Mac)
+./build-image.sh --tcg
 ```
 
-This builds the complete image with default settings. The build takes ~13 minutes on first run, but checkpoint-based rebuilds are much faster.
+**Build times:**
+
+- KVM variant: Fast (hardware acceleration)
+- TCG variant: Slower (software emulation)
+
+Checkpoint-based rebuilds are much faster for both variants.
 
 ## Build Workflow
 
@@ -33,6 +42,36 @@ The build uses **bash orchestration** with **QEMU snapshots** for checkpointing,
 
 Each checkpoint is saved as a Docker image with QEMU snapshots embedded in `/storage/*.qcow2` files.
 
+## Image Variants
+
+### KVM vs TCG
+
+We build two variants of each image:
+
+**KVM Variant** (default):
+
+- Uses hardware virtualization (KVM acceleration)
+- Fast: Hardware-accelerated execution
+- Requires: Linux system with `/dev/kvm` access
+- Best for: CI/CD, production testing on Linux
+
+**TCG Variant** (`--tcg` flag):
+
+- Uses software emulation (QEMU TCG)
+- Portable: Works on all platforms including macOS
+- Slower: Software emulation (no hardware acceleration)
+- Best for: Development on Mac, cross-platform compatibility
+
+**Important:** Snapshots from KVM builds are incompatible with TCG and vice versa. Build with `--tcg` if you need to run on systems without KVM support.
+
+### Platform Compatibility
+
+| Platform | KVM Variant | TCG Variant |
+|----------|-------------|-------------|
+| Linux x86_64 with KVM | ✅ Fast | ✅ Slow |
+| Linux x86_64 no KVM | ❌ | ✅ Slow |
+| macOS (ARM64) | ❌ | ✅ Slow |
+
 ## Checkpoint System
 
 ### How Checkpoints Work
@@ -47,10 +86,19 @@ This allows instant restoration of DSM state without re-running automation.
 
 ### Checkpoint Images
 
-The build creates these images:
+The build creates these checkpoint images (for development/debugging):
 
-- `ghcr.io/vdsm-ci/vdsm-ci:ckpt-start-ready` - DSM booted, ready for setup
-- `ghcr.io/vdsm-ci/vdsm-ci:latest` - Fully configured with NFS
+**KVM variant:**
+
+- `ghcr.io/claytono/vdsm-ci-kvm:ckpt-start-ready` - DSM booted, ready for setup
+- `ghcr.io/claytono/vdsm-ci-kvm:latest` - Fully configured with NFS
+
+**TCG variant:**
+
+- `ghcr.io/claytono/vdsm-ci-tcg:ckpt-start-ready` - DSM booted, ready for setup
+- `ghcr.io/claytono/vdsm-ci-tcg:latest` - Fully configured with NFS
+
+**Note:** Published images use `ghcr.io/claytono/` namespace. Local builds use `vdsm-ci/` by default.
 
 ### Resuming from Checkpoints
 
