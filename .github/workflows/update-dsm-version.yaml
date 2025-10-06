@@ -1,0 +1,54 @@
+---
+name: Update DSM Version
+
+on:
+  schedule:
+    # Run weekly on Mondays at 2 AM UTC
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+
+jobs:
+  check-update:
+    name: Check for DSM version updates
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Nix
+      uses: cachix/install-nix-action@v27
+
+    - name: Get current version
+      id: current
+      run: |
+        source dsm-version.sh
+        echo "version=$DSM_VERSION" >> $GITHUB_OUTPUT
+        echo "build=$DSM_BUILD" >> $GITHUB_OUTPUT
+        echo "Current: $DSM_VERSION-$DSM_BUILD"
+
+    - name: Scrape latest version and update file
+      id: scrape
+      run: |
+        # Scrape and update the file (script writes to GITHUB_OUTPUT automatically)
+        nix develop --command python3 scripts/scrape-dsm-version.py --update-file
+
+    - name: Create Pull Request
+      if: steps.current.outputs.version != steps.scrape.outputs.version || steps.current.outputs.build != steps.scrape.outputs.build
+      uses: peter-evans/create-pull-request@v6
+      with:
+        commit-message: "Update DSM to ${{ steps.scrape.outputs.version }}-${{ steps.scrape.outputs.build }}"
+        branch: update-dsm-version
+        delete-branch: true
+        title: "Update DSM to ${{ steps.scrape.outputs.version }}-${{ steps.scrape.outputs.build }}"
+        body: |
+          Automated update of DSM version from Synology release notes.
+
+          - **Previous:** ${{ steps.current.outputs.version }}-${{ steps.current.outputs.build }}
+          - **New:** ${{ steps.scrape.outputs.version }}-${{ steps.scrape.outputs.build }}
+
+          Source: https://www.synology.com/en-us/releaseNote/DSM?model=VirtualDSM#7_2
+        labels: dependencies

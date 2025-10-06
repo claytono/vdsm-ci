@@ -15,9 +15,8 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             pre-commit
-            (python3.withPackages (ps: with ps; [
-              playwright
-            ]))
+            python3
+            jq
           ];
 
           shellHook = ''
