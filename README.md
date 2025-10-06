@@ -17,7 +17,7 @@ docker run -d \
   --name vdsm-test \
   --privileged \
   -p 5000:5000 \
-  ghcr.io/claytono/vdsm-ci:latest
+  ghcr.io/claytono/vdsm-ci-kvm:latest
 
 # Wait ~30 seconds for QEMU snapshot restore
 sleep 30
@@ -46,15 +46,42 @@ sleep 30
 
 ### Available Images
 
+We provide two variants optimized for different use cases:
+
+#### KVM Variant (Recommended for Linux)
+
+Fast, hardware-accelerated variant for Linux systems with KVM support:
+
 ```bash
-# Latest stable release
-ghcr.io/claytono/vdsm-ci:latest
+# Latest KVM variant
+ghcr.io/claytono/vdsm-ci-kvm:latest
 
-# Specific DSM version
-ghcr.io/claytono/vdsm-ci:7.2.2
+# Specific DSM version with KVM
+ghcr.io/claytono/vdsm-ci-kvm:7.2.2
+```
 
-# Development checkpoint (DSM booted but not configured)
-ghcr.io/vdsm-ci/vdsm-ci:ckpt-start-ready
+#### TCG Variant (For Mac and systems without KVM)
+
+Portable variant using software emulation - works on all platforms:
+
+```bash
+# Latest TCG variant
+ghcr.io/claytono/vdsm-ci-tcg:latest
+
+# Specific DSM version with TCG
+ghcr.io/claytono/vdsm-ci-tcg:7.2.2
+```
+
+**Note:** TCG variant is slower (software emulation) but provides cross-platform compatibility, including macOS.
+
+#### Development Checkpoints
+
+```bash
+# DSM booted but not configured (KVM)
+ghcr.io/vdsm-ci/vdsm-ci-kvm:ckpt-start-ready
+
+# DSM booted but not configured (TCG)
+ghcr.io/vdsm-ci/vdsm-ci-tcg:ckpt-start-ready
 ```
 
 ### Building from Source
@@ -62,7 +89,11 @@ ghcr.io/vdsm-ci/vdsm-ci:ckpt-start-ready
 To build your own image:
 
 ```bash
+# Build KVM variant (default)
 ./build-image.sh
+
+# Build TCG variant (for cross-platform compatibility)
+./build-image.sh --tcg
 ```
 
 See [BUILD.md](BUILD.md) for complete build documentation.
