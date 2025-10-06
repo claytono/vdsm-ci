@@ -21,6 +21,7 @@ DSM_VM_IP=${DSM_VM_IP:-"20.20.20.21"}
 
 CONTAINER_NAME="vdsm-config"
 PATCHED_IMAGE="vdsm/virtual-dsm:patched"
+QEMU_CPU_FLAGS="-cpu Westmere,-invtsc"
 
 KEEP_CONTAINER=false
 IGNORE_CHECKPOINTS=false
@@ -28,6 +29,7 @@ CLEANUP_OLD_IMAGES=true
 START_FROM_CHECKPOINT=""
 EXPLORE_ONLY=false
 ENABLE_CHECKPOINTS=false
+ACCEL_MODE="auto"  # "auto", "kvm", or "tcg"
 
 # ============================================================================
 # Helper Functions
@@ -64,17 +66,25 @@ run_vdsm_container() {
 
   docker rm "$CONTAINER_NAME" 2>/dev/null || true
 
-  local qemu_args="-cpu max,-invtsc"
+  local qemu_args="$QEMU_CPU_FLAGS"
   if [[ -n "$snapshot_name" ]]; then
     qemu_args="$qemu_args -loadvm $snapshot_name"
   fi
 
+  local kvm_env=""
+  if [[ "$ACCEL_MODE" == "tcg" ]]; then
+    kvm_env="-e KVM=N"
+  fi
+
+  # Intentional word splitting for optional env var
+  # shellcheck disable=SC2086
   docker run -d \
     --name "$CONTAINER_NAME" \
     --privileged \
     -p 5000:5000 \
     -e DISK_FMT=qcow2 \
     -e ARGUMENTS="$qemu_args" \
+    $kvm_env \
     -v "$DSM_PAT_FILE:/boot.pat:ro" \
     -v "$PWD/videos:/tmp/playwright-videos" \
     "$image"
@@ -99,7 +109,7 @@ stop_and_commit() {
   )
 
   if [[ -n "$snapshot_name" ]]; then
-    changes+=("ENV ARGUMENTS=\"-cpu max,-invtsc -loadvm ${snapshot_name}\"")
+    changes+=("ENV ARGUMENTS=\"${QEMU_CPU_FLAGS} -loadvm ${snapshot_name}\"")
   fi
 
   local change_args=()
@@ -288,8 +298,16 @@ parse_args() {
         ENABLE_CHECKPOINTS=true
         shift
         ;;
+      --tcg)
+        ACCEL_MODE="tcg"
+        shift
+        ;;
+      --kvm)
+        ACCEL_MODE="kvm"
+        shift
+        ;;
       *)
-        echo "Usage: $0 [--keep] [--no-cache] [--disable-image-cleanup] [--from-checkpoint <name>] [--explore] [--checkpoints]" >&2
+        echo "Usage: $0 [--keep] [--no-cache] [--disable-image-cleanup] [--from-checkpoint <name>] [--explore] [--checkpoints] [--tcg|--kvm]" >&2
         exit 1
         ;;
     esac
@@ -449,7 +467,32 @@ echo "============================================"
 echo "  Building Pre-configured VDSM Image"
 echo "============================================"
 echo ""
+
+# Auto-detect acceleration mode if set to "auto"
+if [[ "$ACCEL_MODE" == "auto" ]]; then
+  if [[ -e "/dev/kvm" ]]; then
+    ACCEL_MODE="kvm"
+    echo "Auto-detected: KVM acceleration available"
+  elif [[ "$OSTYPE" == "darwin"* ]]; then
+    ACCEL_MODE="tcg"
+    echo "Auto-detected: macOS detected, using TCG"
+  else
+    echo "ERROR: Cannot auto-detect acceleration mode." >&2
+    echo "  /dev/kvm not found and not on macOS." >&2
+    echo "  Please specify --kvm or --tcg explicitly." >&2
+    exit 1
+  fi
+fi
+
+# Add variant suffix to image name (unless already present in DSM_IMAGE_NAME)
+if [[ "$IMAGE_NAME" != *"-kvm" ]] && [[ "$IMAGE_NAME" != *"-tcg" ]]; then
+  IMAGE_NAME="${IMAGE_NAME}-${ACCEL_MODE}"
+  FULL_IMAGE_NAME="$IMAGE_NAME:$IMAGE_TAG"
+fi
+
+echo ""
 echo "Image: $FULL_IMAGE_NAME"
+echo "Acceleration: $ACCEL_MODE"
 echo "Server name: $DSM_SERVER_NAME"
 echo "Admin user: $DSM_ADMIN_USER"
 echo ""
@@ -607,6 +650,8 @@ echo "Flattening image to reduce size..."
 # Use empty context since Dockerfile.flatten only copies from other images
 docker build \
   --build-arg CHECKPOINT_IMAGE="$SOURCE_IMAGE" \
+  --build-arg QEMU_CPU_FLAGS="$QEMU_CPU_FLAGS" \
+  --build-arg VARIANT="$ACCEL_MODE" \
   -t "$FULL_IMAGE_NAME" - < Dockerfile.flatten
 
 # Clean up temp image if created
