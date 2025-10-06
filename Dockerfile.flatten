@@ -12,7 +12,7 @@ FROM ${CHECKPOINT_IMAGE} AS checkpoint
 FROM vdsm/virtual-dsm:patched AS patched
 
 # Final image: original base + qcow2 support + configured disks
-FROM vdsm/virtual-dsm:7.41@sha256:3bec39b40ae702cdd6dc5ec25adc350ea47b01a722d60cc0805ab91969fb41cb
+FROM vdsm/virtual-dsm:7.41@sha256:3bec39b40ae702cdd6dc5ec25adc350ea47b01a722d60cc0805ab91969fb41cb AS base
 
 # Add qcow2 conversion support (copy pre-patched files)
 COPY --from=patched /run/convert.sh /run/convert.sh
@@ -29,6 +29,17 @@ COPY --from=checkpoint /storage/dsm.* /storage/
 ARG QEMU_CPU_FLAGS
 ENV ARGUMENTS="${QEMU_CPU_FLAGS} -loadvm final"
 ENV DISK_FMT=qcow2
+
+# KVM variant (default)
+FROM base AS variant-kvm
+
+# TCG variant with KVM disabled
+FROM base AS variant-tcg
+ENV KVM=N
+
+# Select final variant based on build arg
+ARG VARIANT=kvm
+FROM variant-${VARIANT} AS final
 
 # Add labels for image management
 ARG VARIANT

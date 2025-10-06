@@ -71,6 +71,8 @@ run_vdsm_container() {
     qemu_args="$qemu_args -loadvm $snapshot_name"
   fi
 
+  # For TCG builds, we need KVM=N during checkpoint creation
+  # Otherwise snapshots will contain kvmclock state incompatible with TCG
   local kvm_args=()
   if [[ "$ACCEL_MODE" == "tcg" ]]; then
     kvm_args+=(-e KVM=N)
