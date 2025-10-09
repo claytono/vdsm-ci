@@ -10,7 +10,7 @@ source "$BASEDIR/dsm-version.sh"
 DSM_PAT_URL="https://global.synologydownload.com/download/DSM/release/${DSM_VERSION}/${DSM_BUILD}/DSM_VirtualDSM_${DSM_BUILD}.pat"
 DSM_PAT_FILE="$BASEDIR/cache/DSM_VirtualDSM_${DSM_BUILD}.pat"
 
-IMAGE_NAME=${DSM_IMAGE_NAME:-"ghcr.io/vdsm-ci/vdsm-ci"}
+IMAGE_NAME=${DSM_IMAGE_NAME:-"ghcr.io/claytono/vdsm-ci"}
 IMAGE_TAG=${DSM_IMAGE_TAG:-"latest"}
 FULL_IMAGE_NAME="$IMAGE_NAME:$IMAGE_TAG"
 

@@ -81,10 +81,10 @@ ghcr.io/claytono/vdsm-ci-tcg:7.2.2
 
 ```bash
 # DSM booted but not configured (KVM)
-ghcr.io/vdsm-ci/vdsm-ci-kvm:ckpt-start-ready
+ghcr.io/claytono/vdsm-ci-kvm:ckpt-start-ready
 
 # DSM booted but not configured (TCG)
-ghcr.io/vdsm-ci/vdsm-ci-tcg:ckpt-start-ready
+ghcr.io/claytono/vdsm-ci-tcg:ckpt-start-ready
 ```
 
 ### Building from Source

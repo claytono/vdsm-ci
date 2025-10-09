@@ -3,7 +3,7 @@
 # Note: PAT file already removed during build by build-image.sh
 
 # Extract configured disk images from checkpoint
-ARG CHECKPOINT_IMAGE=ghcr.io/vdsm-ci/vdsm-ci:ckpt-final
+ARG CHECKPOINT_IMAGE=ghcr.io/claytono/vdsm-ci:ckpt-final
 ARG QEMU_CPU_FLAGS="-cpu Westmere,-invtsc"
 ARG VARIANT=kvm
 FROM ${CHECKPOINT_IMAGE} AS checkpoint

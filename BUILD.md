@@ -98,8 +98,6 @@ The build creates these checkpoint images (for development/debugging):
 - `ghcr.io/claytono/vdsm-ci-tcg:ckpt-start-ready` - DSM booted, ready for setup
 - `ghcr.io/claytono/vdsm-ci-tcg:latest` - Fully configured with NFS
 
-**Note:** Published images use `ghcr.io/claytono/` namespace. Local builds use `vdsm-ci/` by default.
-
 ### Resuming from Checkpoints
 
 Speed up iteration by starting from a checkpoint:
@@ -232,7 +230,7 @@ If you see "Checkpoint 'X' does not exist":
 
 ```bash
 # List available checkpoints
-docker images ghcr.io/vdsm-ci/vdsm-ci --format "{{.Tag}}" | grep ckpt-
+docker images ghcr.io/claytono/vdsm-ci --format "{{.Tag}}" | grep ckpt-
 
 # Checkpoint names don't include the "ckpt-" prefix in --from-checkpoint
 ./build-image.sh --from-checkpoint start-ready  # Correct
@@ -246,7 +244,7 @@ Check if QEMU snapshot is valid:
 ```bash
 # Start container
 docker run -d --name vdsm-test --privileged -p 5000:5000 \
-  ghcr.io/vdsm-ci/vdsm-ci:ckpt-start-ready
+  ghcr.io/claytono/vdsm-ci-kvm:ckpt-start-ready
 
 # Check logs
 docker logs vdsm-test
@@ -265,7 +263,7 @@ docker run -d \
   -p 5000:5000 \
   --cap-add NET_ADMIN \
   --name vdsm-test \
-  ghcr.io/vdsm-ci/vdsm-ci:latest
+  ghcr.io/claytono/vdsm-ci-kvm:latest
 
 # Wait ~30 seconds for QEMU snapshot restore
 sleep 30
