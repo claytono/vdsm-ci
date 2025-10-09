@@ -62,7 +62,7 @@ jobs:
         command: ./build-image.sh --no-cache ${{ matrix.flag }}
       env:
         REGISTRY: ghcr.io
-        DSM_IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}-${{ matrix.arch }}
+        DSM_IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}
         DSM_IMAGE_TAG: latest
 
     - name: Upload videos as artifacts
@@ -74,11 +74,20 @@ jobs:
         retention-days: 7
         if-no-files-found: ignore
 
-    - name: Push architecture-specific image
+    - name: Tag and push architecture-specific image
       if: github.event_name != 'pull_request'
       run: |
         # Source version configuration
         source dsm-version.sh
+
+        # Tag the built image with architecture-specific names
+        docker tag ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}:latest \
+          ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}-${{ matrix.arch }}:latest
+
+        docker tag ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}:${DSM_VERSION} \
+          ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}-${{ matrix.arch }}:${DSM_VERSION}
+
+        # Push architecture-specific tags
         docker push ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}-${{ matrix.arch }}:latest
         docker push ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}-${{ matrix.arch }}:${DSM_VERSION}
 
