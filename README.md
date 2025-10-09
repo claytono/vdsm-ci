@@ -13,15 +13,15 @@ This repository builds Docker images of Synology DSM with pre-configured admin a
 Pull and run the pre-configured DSM image:
 
 ```bash
-docker run -d \
+docker run -it --rm \
   --name vdsm-test \
-  --privileged \
+  --device=/dev/kvm \
+  --device=/dev/net/tun \
+  --cap-add NET_ADMIN \
   -p 5000:5000 \
   ghcr.io/claytono/vdsm-ci-kvm:latest
 
 # Wait ~30 seconds for QEMU snapshot restore
-sleep 30
-
 # Access DSM at http://localhost:5000
 ```
 
@@ -65,14 +65,17 @@ ghcr.io/claytono/vdsm-ci-kvm:7.2.2
 Portable variant using software emulation - works on all platforms:
 
 ```bash
-# Latest TCG variant
-ghcr.io/claytono/vdsm-ci-tcg:latest
+# Latest TCG variant (uses QEMU user networking, no devices needed)
+docker run -it --rm \
+  --name vdsm-test \
+  -p 5000:5000 \
+  ghcr.io/claytono/vdsm-ci-tcg:latest
 
 # Specific DSM version with TCG
 ghcr.io/claytono/vdsm-ci-tcg:7.2.2
 ```
 
-**Note:** TCG variant is slower (software emulation) but provides cross-platform compatibility, including macOS.
+**Note:** TCG variant is slower (software emulation) but provides cross-platform compatibility, including macOS. Uses QEMU user-mode networking instead of TAP devices.
 
 #### Development Checkpoints
 
