@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGE_NAME="${1:-ghcr.io/vdsm-ci/vdsm-ci:latest}"
+IMAGE_NAME="${1:-ghcr.io/claytono/vdsm-ci-kvm:latest}"
 CONTAINER_NAME="vdsm-smoke-test"
 SMOKE_TEST_PORT=5001
 TIMEOUT=60
