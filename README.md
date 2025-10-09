@@ -48,21 +48,23 @@ docker run -it --rm \
 
 We provide two variants optimized for different use cases:
 
-#### KVM Variant (Recommended for Linux)
+#### KVM Variant (Recommended for x86_64 Linux)
 
-Fast, hardware-accelerated variant for Linux systems with KVM support:
+Fast, hardware-accelerated variant for x86_64 Linux systems with KVM support:
 
 ```bash
-# Latest KVM variant
+# Latest KVM variant (amd64 only)
 ghcr.io/claytono/vdsm-ci-kvm:latest
 
 # Specific DSM version with KVM
 ghcr.io/claytono/vdsm-ci-kvm:7.2.2
 ```
 
+**Note:** KVM variant is amd64-only as it requires x86 hardware virtualization.
+
 #### TCG Variant (For Mac and systems without KVM)
 
-Portable variant using software emulation - works on all platforms:
+Portable multi-arch variant using software emulation - works on all platforms:
 
 ```bash
 # Latest TCG variant (uses QEMU user networking, no devices needed)
@@ -75,7 +77,7 @@ docker run -it --rm \
 ghcr.io/claytono/vdsm-ci-tcg:7.2.2
 ```
 
-**Note:** TCG variant is slower (software emulation) but provides cross-platform compatibility, including macOS. Uses QEMU user-mode networking instead of TAP devices.
+**Note:** TCG variant is slower (software emulation) but provides cross-platform compatibility, including macOS. Docker automatically pulls the correct architecture (amd64 or arm64) for your system. Uses QEMU user-mode networking instead of TAP devices.
 
 #### Development Checkpoints
 

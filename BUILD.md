@@ -70,7 +70,10 @@ We build two variants of each image:
 |----------|-------------|-------------|
 | Linux x86_64 with KVM | ✅ Fast | ✅ Slow |
 | Linux x86_64 no KVM | ❌ | ✅ Slow |
+| Linux ARM64 | ❌ | ✅ Slow |
 | macOS (ARM64) | ❌ | ✅ Slow |
+
+**Multi-arch support:** TCG variant images are published as multi-arch manifests supporting both amd64 and arm64. Docker automatically pulls the correct architecture for your system.
 
 ## Checkpoint System
 
