@@ -8,6 +8,10 @@ on:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     strategy:
@@ -80,16 +84,16 @@ jobs:
         # Source version configuration
         source dsm-version.sh
 
-        # Tag the built image with architecture-specific names
+        # Tag the built image with architecture-specific names (intermediate build artifacts)
         docker tag ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}:latest \
-          ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}-${{ matrix.arch }}:latest
+          ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}-build-${{ matrix.arch }}:latest
 
         docker tag ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}:${DSM_VERSION} \
-          ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}-${{ matrix.arch }}:${DSM_VERSION}
+          ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}-build-${{ matrix.arch }}:${DSM_VERSION}
 
-        # Push architecture-specific tags
-        docker push ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}-${{ matrix.arch }}:latest
-        docker push ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}-${{ matrix.arch }}:${DSM_VERSION}
+        # Push intermediate architecture-specific tags
+        docker push ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}-build-${{ matrix.arch }}:latest
+        docker push ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}-build-${{ matrix.arch }}:${DSM_VERSION}
 
   create-manifests:
     name: Create multi-arch manifests
@@ -117,22 +121,22 @@ jobs:
         # Source version configuration
         source dsm-version.sh
 
-        # KVM: amd64 only (retag from -amd64 image)
+        # KVM: amd64 only (retag from build image)
         docker buildx imagetools create \
           -t ghcr.io/${{ github.repository_owner }}/vdsm-ci-kvm:latest \
-          ghcr.io/${{ github.repository_owner }}/vdsm-ci-kvm-amd64:latest
+          ghcr.io/${{ github.repository_owner }}/vdsm-ci-kvm-build-amd64:latest
 
         docker buildx imagetools create \
           -t ghcr.io/${{ github.repository_owner }}/vdsm-ci-kvm:${DSM_VERSION} \
-          ghcr.io/${{ github.repository_owner }}/vdsm-ci-kvm-amd64:${DSM_VERSION}
+          ghcr.io/${{ github.repository_owner }}/vdsm-ci-kvm-build-amd64:${DSM_VERSION}
 
-        # TCG: multi-arch manifest (combine amd64 and arm64)
+        # TCG: multi-arch manifest (combine build images)
         docker buildx imagetools create \
           -t ghcr.io/${{ github.repository_owner }}/vdsm-ci-tcg:latest \
-          ghcr.io/${{ github.repository_owner }}/vdsm-ci-tcg-amd64:latest \
-          ghcr.io/${{ github.repository_owner }}/vdsm-ci-tcg-arm64:latest
+          ghcr.io/${{ github.repository_owner }}/vdsm-ci-tcg-build-amd64:latest \
+          ghcr.io/${{ github.repository_owner }}/vdsm-ci-tcg-build-arm64:latest
 
         docker buildx imagetools create \
           -t ghcr.io/${{ github.repository_owner }}/vdsm-ci-tcg:${DSM_VERSION} \
-          ghcr.io/${{ github.repository_owner }}/vdsm-ci-tcg-amd64:${DSM_VERSION} \
-          ghcr.io/${{ github.repository_owner }}/vdsm-ci-tcg-arm64:${DSM_VERSION}
+          ghcr.io/${{ github.repository_owner }}/vdsm-ci-tcg-build-amd64:${DSM_VERSION} \
+          ghcr.io/${{ github.repository_owner }}/vdsm-ci-tcg-build-arm64:${DSM_VERSION}
