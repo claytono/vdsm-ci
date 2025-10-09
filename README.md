@@ -89,6 +89,19 @@ ghcr.io/claytono/vdsm-ci-kvm:ckpt-start-ready
 ghcr.io/claytono/vdsm-ci-tcg:ckpt-start-ready
 ```
 
+#### Build Images (Internal Use)
+
+The following images are intermediate build artifacts used to create the final multi-arch manifests. You typically don't need to use these directly:
+
+```bash
+# Architecture-specific build images
+ghcr.io/claytono/vdsm-ci-kvm-build-amd64:latest
+ghcr.io/claytono/vdsm-ci-tcg-build-amd64:latest
+ghcr.io/claytono/vdsm-ci-tcg-build-arm64:latest
+```
+
+These are combined into the final `vdsm-ci-kvm` and `vdsm-ci-tcg` images during the CI build process.
+
 ### Building from Source
 
 To build your own image:
