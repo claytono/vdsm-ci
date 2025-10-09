@@ -12,16 +12,27 @@ jobs:
   build:
     strategy:
       matrix:
-        variant:
+        include:
+          # KVM variant: only amd64 (requires x86 KVM)
           - name: kvm
             flag: "--kvm"
             image_suffix: "-kvm"
+            runner: ubuntu-latest
+            arch: amd64
+          # TCG variant: both amd64 and arm64 (software emulation)
           - name: tcg
             flag: "--tcg"
             image_suffix: "-tcg"
+            runner: ubuntu-latest
+            arch: amd64
+          - name: tcg
+            flag: "--tcg"
+            image_suffix: "-tcg"
+            runner: ubuntu-24.04-arm
+            arch: arm64
 
-    name: Build ${{ matrix.variant.name }} variant
-    runs-on: ubuntu-latest
+    name: Build ${{ matrix.name }} variant (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     permissions:
       contents: read
@@ -48,25 +59,71 @@ jobs:
         timeout_minutes: 60
         max_attempts: 2
         retry_wait_seconds: 60
-        command: ./build-image.sh --no-cache ${{ matrix.variant.flag }}
+        command: ./build-image.sh --no-cache ${{ matrix.flag }}
       env:
         REGISTRY: ghcr.io
-        DSM_IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.variant.image_suffix }}
+        DSM_IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}-${{ matrix.arch }}
         DSM_IMAGE_TAG: latest
 
     - name: Upload videos as artifacts
       if: always()
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
-        name: playwright-videos-${{ matrix.variant.name }}
+        name: playwright-videos-${{ matrix.name }}-${{ matrix.arch }}
         path: videos/*.webm
         retention-days: 7
         if-no-files-found: ignore
 
-    - name: Push final image
+    - name: Push architecture-specific image
       if: github.event_name != 'pull_request'
       run: |
         # Source version configuration
         source dsm-version.sh
-        docker push ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.variant.image_suffix }}:latest
-        docker push ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.variant.image_suffix }}:${DSM_VERSION}
+        docker push ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}-${{ matrix.arch }}:latest
+        docker push ghcr.io/${{ github.repository_owner }}/vdsm-ci${{ matrix.image_suffix }}-${{ matrix.arch }}:${DSM_VERSION}
+
+  create-manifests:
+    name: Create multi-arch manifests
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+    - name: Log in to GitHub Container Registry
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create and push manifests
+      if: github.event_name != 'pull_request'
+      run: |
+        # Source version configuration
+        source dsm-version.sh
+
+        # KVM: amd64 only (retag from -amd64 image)
+        docker buildx imagetools create \
+          -t ghcr.io/${{ github.repository_owner }}/vdsm-ci-kvm:latest \
+          ghcr.io/${{ github.repository_owner }}/vdsm-ci-kvm-amd64:latest
+
+        docker buildx imagetools create \
+          -t ghcr.io/${{ github.repository_owner }}/vdsm-ci-kvm:${DSM_VERSION} \
+          ghcr.io/${{ github.repository_owner }}/vdsm-ci-kvm-amd64:${DSM_VERSION}
+
+        # TCG: multi-arch manifest (combine amd64 and arm64)
+        docker buildx imagetools create \
+          -t ghcr.io/${{ github.repository_owner }}/vdsm-ci-tcg:latest \
+          ghcr.io/${{ github.repository_owner }}/vdsm-ci-tcg-amd64:latest \
+          ghcr.io/${{ github.repository_owner }}/vdsm-ci-tcg-arm64:latest
+
+        docker buildx imagetools create \
+          -t ghcr.io/${{ github.repository_owner }}/vdsm-ci-tcg:${DSM_VERSION} \
+          ghcr.io/${{ github.repository_owner }}/vdsm-ci-tcg-amd64:${DSM_VERSION} \
+          ghcr.io/${{ github.repository_owner }}/vdsm-ci-tcg-arm64:${DSM_VERSION}
